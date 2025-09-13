@@ -49,11 +49,6 @@ The dashboard will open in your browser at `http://localhost:8501`
 4. **Market Overview**: Get aggregate sentiment trends across multiple stocks
 5. **Real-time Updates**: Refresh for latest stock prices and sentiment scores
 
-## 🏗️ Project Structure
-
-```
-
-```
 
 ## 🔧 Technologies Used
 
@@ -71,7 +66,6 @@ The dashboard will open in your browser at `http://localhost:8501`
 - **FinBERT**: Transformer model fine-tuned on financial text for domain-specific sentiment
 - **Correlation Analysis**: Statistical analysis between sentiment scores and stock returns
 - **Visualization**: Interactive charts showing sentiment trends and market movements
-
 
 
 ## 📝 License

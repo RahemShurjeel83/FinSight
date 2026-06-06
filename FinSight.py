@@ -9,7 +9,9 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
 from datetime import datetime, timedelta
 import warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', message='.*resume_download.*')
+warnings.filterwarnings('ignore', message='.*clean_up_tokenization_spaces.*')
 
 # Data Ingestion
 
@@ -21,7 +23,7 @@ def load_financial_phrasebank():
     We'll need to transform this for our use case.
     """
     try:
-        
+        np.random.seed(42)
         df = pd.read_csv("all-data.csv", encoding='latin-1', header=None)
         df.columns = ['sentence', 'sentiment']
         num_rows = len(df)
@@ -39,7 +41,7 @@ def load_financial_phrasebank():
         
         return df[['date', 'title', 'ticker', 'sentiment']]
     except FileNotFoundError:
-        st.error("❌ Could not find 'all-data.csv'. Please ensure it's in the same directory as app.py")
+        st.error("❌ Could not find 'all-data.csv'. Please ensure it's in the same directory as FinSight.py")
         return pd.DataFrame(columns=["date", "title", "ticker", "sentiment"])
     except Exception as e:
         st.error(f"Error loading dataset: {e}")
@@ -67,7 +69,7 @@ def init_sentiment_models():
         return None, None
 
 def analyze_sentiment(text, vader, finbert):
-    """Analyze sentiment using both VADER and FinBERT - FIXED VERSION."""
+    """Analyze sentiment using both VADER and FinBERT."""
     vader_score = 0
     finbert_score = 0
     
@@ -120,16 +122,16 @@ def calculate_sentiment_scores(news_df, _vader, _finbert):
         scores = []
         failed_count = 0
         
-        for idx, row in news_df.iterrows():
+        for i, (_, row) in enumerate(news_df.iterrows()):
             v_score, f_score = analyze_sentiment(str(row["title"]), _vader, _finbert)
-            
+
             if f_score == 0:
                 failed_count += 1
-            
+
             scores.append([v_score, f_score])
-            progress = (idx + 1) / len(news_df)
+            progress = (i + 1) / len(news_df)
             progress_bar.progress(progress)
-            status_text.text(f'Processing headline {idx + 1}/{len(news_df)} (FinBERT failures: {failed_count})')
+            status_text.text(f'Processing headline {i + 1}/{len(news_df)} (FinBERT failures: {failed_count})')
         
         progress_bar.empty()
         status_text.empty()
@@ -189,12 +191,10 @@ def correlate_sentiment_with_returns(news_df, stock_df, ticker):
             return pd.DataFrame()
 
         daily_sentiment = (
-            ticker_news.groupby("date")[["vader_score", "finbert_score"]]
-            .agg(['mean', 'count'])  
+            ticker_news.groupby("date")
+            .agg(vader_score=("vader_score", "mean"), finbert_score=("finbert_score", "mean"))
             .reset_index()
         )
-        
-        daily_sentiment.columns = ['date', 'vader_score', 'finbert_score', 'vader_count', 'finbert_count']
         
         daily_sentiment['date'] = pd.to_datetime(daily_sentiment['date']).dt.normalize()
 
@@ -358,7 +358,7 @@ def display_analysis_results(merged, ticker):
         try:
             corr_vader = merged[['vader_score', 'return']].corr().iloc[0, 1]
             corr_finbert = merged[['finbert_score', 'return']].corr().iloc[0, 1]
-        except:
+        except Exception:
             corr_vader = 0
             corr_finbert = 0
         
